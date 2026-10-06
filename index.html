@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FPL Transfer Advisor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+/* ── Reset & base ─────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:        #070c18;
+  --surface:   #0d1525;
+  --surface2:  #111c33;
+  --border:    #1e2e4a;
+  --accent:    #00e676;
+  --accent2:   #00b4d8;
+  --red:       #ff4d6d;
+  --text:      #e2eaf5;
+  --muted:     #6b7fa3;
+  --gk:        #f9a825;
+  --def:       #29b6f6;
+  --mid:       #66bb6a;
+  --fwd:       #ef5350;
+}
+html{scroll-behavior:smooth}
+body{
+  font-family:'DM Sans',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* ── Scrollbar ───────────────────────────────────────── */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* ── Header ──────────────────────────────────────────── */
+header{
+  background:linear-gradient(135deg,#0a1628 0%,#0d2040 50%,#091424 100%);
+  border-bottom:1px solid var(--border);
+  padding:28px 40px;
+  display:flex;
+  align-items:center;
+  gap:20px;
+  position:sticky;
+  top:0;
+  z-index:100;
+  backdrop-filter:blur(12px);
+}
+.logo-badge{
+  width:48px;height:48px;
+  background:linear-gradient(135deg,var(--accent),#00b4d8);
+  border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:24px;
+  flex-shrink:0;
+  box-shadow:0 0 24px rgba(0,230,118,0.35);
+}
+.header-text h1{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:28px;
+  font-weight:800;
+  letter-spacing:.5px;
+  color:#fff;
+  line-height:1;
+}
+.header-text p{
+  font-size:13px;
+  color:var(--muted);
+  margin-top:3px;
+}
+.header-badge{
+  margin-left:auto;
+  background:rgba(0,230,118,.12);
+  border:1px solid rgba(0,230,118,.25);
+  color:var(--accent);
+  padding:6px 14px;
+  border-radius:20px;
+  font-size:12px;
+  font-weight:600;
+  letter-spacing:.5px;
+  text-transform:uppercase;
+}
+
+/* ── Layout ──────────────────────────────────────────── */
+.container{max-width:1200px;margin:0 auto;padding:32px 24px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+
+/* ── Section title ───────────────────────────────────── */
+.section-title{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:22px;
+  font-weight:700;
+  letter-spacing:.3px;
+  color:#fff;
+  margin-bottom:16px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.section-title .dot{
+  width:8px;height:8px;
+  background:var(--accent);
+  border-radius:50%;
+  box-shadow:0 0 8px var(--accent);
+}
+
+/* ── Card ────────────────────────────────────────────── */
+.card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:24px;
+}
+
+/* ── Settings row ────────────────────────────────────── */
+.settings-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+  gap:16px;
+  margin-bottom:24px;
+}
+.field label{
+  display:block;
+  font-size:11px;
+  font-weight:600;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.8px;
+  margin-bottom:6px;
+}
+.field input,
+.field select{
+  width:100%;
+  background:var(--surface2);
+  border:1px solid var(--border);
+  color:var(--text);
+  padding:10px 14px;
+  border-radius:10px;
+  font-family:'DM Sans',sans-serif;
+  font-size:14px;
+  transition:border-color .2s;
+  outline:none;
+}
+.field input:focus,
+.field select:focus{border-color:var(--accent)}
+
+/* ── Chips ───────────────────────────────────────────── */
+.chips-row{
+  display:flex;flex-wrap:wrap;gap:10px;
+  margin-bottom:24px;
+}
+.chip-toggle{
+  display:none;
+}
+.chip-label{
+  padding:7px 16px;
+  border:1px solid var(--border);
+  border-radius:20px;
+  font-size:13px;
+  color:var(--muted);
+  cursor:pointer;
+  transition:all .2s;
+  user-select:none;
+}
+.chip-toggle:checked + .chip-label{
+  border-color:var(--accent);
+  color:var(--accent);
+  background:rgba(0,230,118,.1);
+}
+
+/* ── Squad input grid ────────────────────────────────── */
+.squad-section{margin-bottom:24px}
+.pos-block{margin-bottom:20px}
+.pos-header{
+  font-size:11px;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:1px;
+  margin-bottom:10px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.pos-header .pip{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+.pos-gk  .pip{background:var(--gk)}
+.pos-def .pip{background:var(--def)}
+.pos-mid .pip{background:var(--mid)}
+.pos-fwd .pip{background:var(--fwd)}
+
+.player-inputs{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+  gap:10px;
+}
+.player-input-wrap{position:relative}
+.player-input-wrap input{
+  width:100%;
+  background:var(--surface2);
+  border:1px solid var(--border);
+  color:var(--text);
+  padding:9px 12px;
+  border-radius:10px;
+  font-size:13px;
+  outline:none;
+  transition:border-color .2s;
+  font-family:'DM Sans',sans-serif;
+}
+.player-input-wrap input:focus{border-color:rgba(0,230,118,.5)}
+.player-input-wrap input.matched{border-color:var(--accent);background:rgba(0,230,118,.05)}
+
+/* autocomplete dropdown */
+.autocomplete-list{
+  position:absolute;
+  top:100%;left:0;right:0;
+  background:#162035;
+  border:1px solid var(--border);
+  border-top:none;
+  border-radius:0 0 10px 10px;
+  max-height:180px;
+  overflow-y:auto;
+  z-index:200;
+  display:none;
+}
+.autocomplete-list.open{display:block}
+.autocomplete-item{
+  padding:8px 12px;
+  font-size:13px;
+  cursor:pointer;
+  transition:background .15s;
+}
+.autocomplete-item:hover,.autocomplete-item.active{
+  background:rgba(0,230,118,.12);
+  color:var(--accent);
+}
+
+/* ── Analyze button ──────────────────────────────────── */
+.btn-analyze{
+  width:100%;
+  padding:16px;
+  background:linear-gradient(135deg,var(--accent),#00b4d8);
+  border:none;
+  border-radius:12px;
+  color:#000;
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:20px;
+  font-weight:700;
+  letter-spacing:.5px;
+  cursor:pointer;
+  transition:opacity .2s,transform .1s;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  text-transform:uppercase;
+}
+.btn-analyze:hover{opacity:.9;transform:translateY(-1px)}
+.btn-analyze:active{transform:translateY(0)}
+.btn-analyze:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+/* ── Loading ─────────────────────────────────────────── */
+.spinner{
+  width:22px;height:22px;
+  border:3px solid rgba(0,0,0,.3);
+  border-top-color:#000;
+  border-radius:50%;
+  animation:spin .7s linear infinite;
+  display:none;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Results area ────────────────────────────────────── */
+#results{display:none;margin-top:40px}
+.results-enter{animation:fadeUp .5s ease both}
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(20px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+/* ── Summary cards ───────────────────────────────────── */
+.summary-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:16px;
+  margin-bottom:32px;
+}
+.summary-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:20px;
+}
+.summary-card .label{
+  font-size:11px;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.8px;
+  margin-bottom:8px;
+}
+.summary-card .value{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:28px;
+  font-weight:700;
+  color:#fff;
+  line-height:1;
+}
+.summary-card .sub{
+  font-size:12px;color:var(--muted);margin-top:4px;
+}
+.summary-card.highlight{
+  border-color:rgba(0,230,118,.3);
+  background:rgba(0,230,118,.06);
+}
+.summary-card.highlight .value{color:var(--accent)}
+
+/* ── Team overview ────────────────────────────────────── */
+.team-table{width:100%;border-collapse:collapse;font-size:13px}
+.team-table th{
+  text-align:left;
+  padding:8px 12px;
+  font-size:10px;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.8px;
+  color:var(--muted);
+  border-bottom:1px solid var(--border);
+}
+.team-table td{
+  padding:9px 12px;
+  border-bottom:1px solid rgba(30,46,74,.5);
+}
+.team-table tr:last-child td{border-bottom:none}
+.team-table tr:hover td{background:rgba(255,255,255,.02)}
+.pos-pill{
+  font-size:10px;
+  font-weight:700;
+  padding:2px 7px;
+  border-radius:4px;
+  text-transform:uppercase;
+  letter-spacing:.5px;
+  font-family:'DM Mono',monospace;
+}
+.pos-pill.gk {background:rgba(249,168,37,.15);color:var(--gk)}
+.pos-pill.def{background:rgba(41,182,246,.15);color:var(--def)}
+.pos-pill.mid{background:rgba(102,187,106,.15);color:var(--mid)}
+.pos-pill.fwd{background:rgba(239,83,80,.15); color:var(--fwd)}
+.pts-num{
+  font-family:'DM Mono',monospace;
+  font-size:13px;
+  font-weight:500;
+}
+.fixture-text{color:var(--muted);font-size:12px}
+
+/* ── Transfer cards ──────────────────────────────────── */
+.transfer-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:24px;
+  margin-bottom:20px;
+  animation:fadeUp .4s ease both;
+  transition:border-color .2s;
+}
+.transfer-card:hover{border-color:rgba(0,230,118,.25)}
+.transfer-card:nth-child(1){animation-delay:.05s}
+.transfer-card:nth-child(2){animation-delay:.10s}
+.transfer-card:nth-child(3){animation-delay:.15s}
+.transfer-card:nth-child(4){animation-delay:.20s}
+.transfer-card:nth-child(5){animation-delay:.25s}
+
+.transfer-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:20px;
+  flex-wrap:wrap;
+  gap:12px;
+}
+.transfer-rank{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:13px;
+  font-weight:700;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:1px;
+}
+.gain-badge{
+  background:rgba(0,230,118,.15);
+  border:1px solid rgba(0,230,118,.3);
+  color:var(--accent);
+  padding:5px 14px;
+  border-radius:20px;
+  font-family:'DM Mono',monospace;
+  font-size:14px;
+  font-weight:500;
+}
+.transfer-meta{
+  font-size:12px;
+  color:var(--muted);
+  font-family:'DM Mono',monospace;
+}
+
+.transfer-players{
+  display:grid;
+  grid-template-columns:1fr auto 1fr;
+  gap:16px;
+  align-items:center;
+  margin-bottom:24px;
+}
+.arrow-col{
+  display:flex;align-items:center;justify-content:center;
+}
+.arrow-icon{
+  width:36px;height:36px;
+  background:rgba(0,230,118,.1);
+  border:1px solid rgba(0,230,118,.25);
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;
+  color:var(--accent);
+}
+
+.player-card-small{
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:14px 16px;
+}
+.pcr-label{
+  font-size:10px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.8px;
+  margin-bottom:8px;
+}
+.pcr-label.out{color:var(--red)}
+.pcr-label.in {color:var(--accent)}
+.pcr-name{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:22px;
+  font-weight:700;
+  color:#fff;
+  margin-bottom:6px;
+  line-height:1;
+}
+.pcr-row{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  margin-bottom:4px;
+}
+.pcr-pts{
+  font-family:'DM Mono',monospace;
+  font-size:13px;
+  color:var(--muted);
+}
+.cost-tag{
+  font-family:'DM Mono',monospace;
+  font-size:12px;
+  background:rgba(255,255,255,.06);
+  padding:2px 8px;
+  border-radius:6px;
+}
+
+/* ── Chart container ─────────────────────────────────── */
+.chart-wrap{
+  position:relative;
+  height:200px;
+  margin-top:8px;
+}
+.fixture-chips{
+  display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;
+}
+.fixture-chip{
+  font-size:10px;
+  background:rgba(255,255,255,.05);
+  border:1px solid var(--border);
+  border-radius:6px;
+  padding:2px 8px;
+  color:var(--muted);
+  font-family:'DM Mono',monospace;
+}
+
+/* ── Error / info banner ─────────────────────────────── */
+.banner{
+  padding:14px 18px;
+  border-radius:10px;
+  font-size:14px;
+  margin-bottom:20px;
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+}
+.banner.error{background:rgba(255,77,109,.12);border:1px solid rgba(255,77,109,.3);color:#ff8fa5}
+.banner.info {background:rgba(0,180,216,.1); border:1px solid rgba(0,180,216,.25);color:#7dd8f0}
+.banner.warn {background:rgba(255,180,0,.1); border:1px solid rgba(255,180,0,.25); color:#ffd077}
+
+/* ── Match log ───────────────────────────────────────── */
+.match-log{
+  font-family:'DM Mono',monospace;
+  font-size:12px;
+  color:var(--muted);
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:12px 16px;
+  margin-bottom:24px;
+  line-height:2;
+}
+
+/* ── No transfers ────────────────────────────────────── */
+.no-transfers{
+  text-align:center;
+  padding:48px;
+  color:var(--muted);
+}
+.no-transfers .icon{font-size:40px;margin-bottom:12px}
+
+/* ── Responsive ──────────────────────────────────────── */
+@media(max-width:768px){
+  header{padding:20px 20px}
+  .container{padding:20px 16px}
+  .grid-2{grid-template-columns:1fr}
+  .transfer-players{grid-template-columns:1fr;gap:10px}
+  .arrow-col{transform:rotate(90deg)}
+}
+
+  /* ── Chip buttons  ───────────────────────── */
+.chip-btn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid #444;
+  background: #111;
+  color: #fff;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.chip-btn:hover {
+  background: #1f1f1f;
+}
+
+
+</style>
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────── -->
+<header>
+  <div class="header-text">
+    <h1>FPL Transfer Advisor</h1>
+    <p>Random Forest powered transfer recommendations for Fantasy Premier League</p>
+  </div>
+</header>
+
+<!-- ── Main form ───────────────────────────────────────── -->
+<div class="container">
+  <div class="card">
+
+    <!-- Settings row -->
+    <div class="section-title"><span class="dot"></span>Gameweek Settings</div>
+    <div class="settings-grid">
+      <div class="field">
+        <label>Current Gameweek</label>
+        <input type="number" id="current_gw" min="1" max="38" value="28" placeholder="28">
+      </div>
+      <div class="field">
+        <label>Free Transfers</label>
+        <input type="number" id="free_transfers" min="1" max="5" value="1" placeholder="1">
+      </div>
+      <div class="field">
+        <label>Money in Bank (£m)</label>
+        <input type="number" id="money_in_bank" min="0" step="0.1" value="0.5" placeholder="0.5">
+      </div>
+    </div>
+
+    <!-- Chips used -->
+    <div class="section-title"><span class="dot"></span>Chips Already Used</div>
+    <div class="chips-row">
+      <input type="checkbox" class="chip-toggle" id="chip-wc" value="wildcard">
+      <label class="chip-label" for="chip-wc">🃏 Wildcard</label>
+
+      <input type="checkbox" class="chip-toggle" id="chip-fh" value="free hit">
+      <label class="chip-label" for="chip-fh">🆓 Free Hit</label>
+
+      <input type="checkbox" class="chip-toggle" id="chip-bb" value="bench boost">
+      <label class="chip-label" for="chip-bb">📦 Bench Boost</label>
+
+      <input type="checkbox" class="chip-toggle" id="chip-tc" value="triple captain">
+      <label class="chip-label" for="chip-tc">3️⃣ Triple Captain</label>
+    </div>
+
+    <!-- Squad input -->
+<div class="section-title"><span class="dot"></span>Your Squad</div>
+<p style="font-size:13px;color:var(--muted);margin-bottom:20px">
+  Enter your 15 players — names will be fuzzy-matched to FPL database.
+</p>
+
+<div class="squad-section">
+
+  <!-- 🧤 GOALKEEPERS -->
+  <div class="pos-block pos-gk">
+    <div class="pos-header"><span class="pip"></span>Goalkeepers</div>
+    <div class="player-inputs" id="inputs-gk">
+
+      <div class="player-input-wrap" data-position="Goalkeeper">
+        <input type="text" placeholder="GK 1" autocomplete="off">
+        <div class="autocomplete-list"></div>
+      </div>
+
+      <div class="player-input-wrap" data-position="Goalkeeper">
+        <input type="text" placeholder="GK 2" autocomplete="off">
+        <div class="autocomplete-list"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 🛡️ DEFENDERS -->
+  <div class="pos-block pos-def">
+    <div class="pos-header"><span class="pip"></span>Defenders</div>
+    <div class="player-inputs" id="inputs-def">
+
+      <div class="player-input-wrap" data-position="Defender">
+        <input type="text" placeholder="DEF 1" autocomplete="off">
+        <div class="autocomplete-list"></div>
+      </div>
+
+      <div class="player-input-wrap" data-position="Defender">
+        <input type="text" placeholder="DEF 2" autocomplete="off">
+        <div class="autocomplete-list"></div>
+      </div>
+
+      <div class="player-input-wrap" data-position="Defender">
+        <input type="text" placeholder="DEF 3" autocomplete="off">
+        <div class="autocomplete-list"></div>
+      </div>
+
+      <div class="player-input-wrap" data-position="Defender">
+        <input type="text" placeholder="DEF 4" autocomplete="off">
+        <div class="autocomplete-list"></div>
+      </div>
+
+      <div class="player-input-wrap" data-position="Defender">
+        <input type="text" placeholder="DEF 5" autocomplete="off">
+        <div class="autocomplete-list"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 🎯 MIDFIELDERS -->
+  <div class="pos-block pos-mid">
+    <div class="pos-header"><span class="pip"></span>Midfielders</div>
+    <div class="player-inputs" id="inputs-mid">
+
+      <div class="player-input-wrap" data-position="Midfielder">
+        <input type="text" placeholder="MID 1" autocomplete="off">
+        <div class="autocomplete-list"></div>
+      </div>
+
+      <div class="player-input-wrap" data-position="Midfielder">
+        <input type="text" placeholder="MID 2" autocomplete="off">
+        <div class="autocomplete-list"></div>
+      </div>
+
+      <div class="player-input-wrap" data-position="Midfielder">
+        <input type="text" placeholder="MID 3" autocomplete="off">
+        <div class="autocomplete-list"></div>
+      </div>
+
+      <div class="player-input-wrap" data-position="Midfielder">
+        <input type="text" placeholder="MID 4" autocomplete="off">
+        <div class="autocomplete-list"></div>
+      </div>
+
+      <div class="player-input-wrap" data-position="Midfielder">
+        <input type="text" placeholder="MID 5" autocomplete="off">
+        <div class="autocomplete-list"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ⚡ FORWARDS -->
+  <div class="pos-block pos-fwd">
+    <div class="pos-header"><span class="pip"></span>Forwards</div>
+    <div class="player-inputs" id="inputs-fwd">
+
+      <div class="player-input-wrap" data-position="Forward">
+        <input type="text" placeholder="FWD 1" autocomplete="off">
+        <div class="autocomplete-list"></div>
+      </div>
+
+      <div class="player-input-wrap" data-position="Forward">
+        <input type="text" placeholder="FWD 2" autocomplete="off">
+        <div class="autocomplete-list"></div>
+      </div>
+
+      <div class="player-input-wrap" data-position="Forward">
+        <input type="text" placeholder="FWD 3" autocomplete="off">
+        <div class="autocomplete-list"></div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /squad-section -->
+
+    <!-- ✅ INJURIES SECTION GOES HERE -->
+<div class="squad-section">
+  <div class="section-title"><span class="dot"></span>Injuries</div>
+
+  <!-- Short-term -->
+  <div class="pos-block">
+    <div class="pos-header">
+      <span class="pip" style="background:#ffb300"></span>
+      Short-Term Injuries (2 GWs)
+    </div>
+    <div class="player-inputs" id="inj-short">
+
+      <div class="player-input-wrap">
+        <input type="text" placeholder="Short-term injury" autocomplete="off">
+        <div class="autocomplete-list"></div>
+      </div>
+
+      <div class="player-input-wrap">
+        <input type="text" placeholder="Short-term injury" autocomplete="off">
+        <div class="autocomplete-list"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Long-term -->
+  <div class="pos-block">
+    <div class="pos-header">
+      <span class="pip" style="background:#ff4d6d"></span>
+      Long-Term Injuries (7 GWs)
+    </div>
+    <div class="player-inputs" id="inj-long">
+
+      <div class="player-input-wrap">
+        <input type="text" placeholder="Long-term injury" autocomplete="off">
+        <div class="autocomplete-list"></div>
+      </div>
+
+      <div class="player-input-wrap">
+        <input type="text" placeholder="Long-term injury" autocomplete="off">
+        <div class="autocomplete-list"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+    <button class="btn-analyze" id="analyzeBtn" onclick="runAnalysis()">
+      <div class="spinner" id="spinner"></div>
+      <span id="btnText">⚡ Analyse My Team</span>
+    </button>
+
+
+  </div><!-- /card -->
+
+  <!-- ── Results ─────────────────────────────────────────── -->
+  <div id="results"></div>
+
+</div><!-- /container -->
+
+<script>
+// ── Player autocomplete ─────────────────────────────────
+let allPlayers = [];
+let lastData = null;
+fetch('/get_players').then(r=>r.json()).then(d=>{ allPlayers=d; });
+
+document.querySelectorAll('.player-input-wrap').forEach(wrap => {
+  const input = wrap.querySelector('input');
+  const list  = wrap.querySelector('.autocomplete-list');
+
+  input.addEventListener('input', () => {
+  const q = input.value.trim().toLowerCase();
+  const position = wrap.dataset.position || null;
+
+  if (q.length < 2) {
+    list.innerHTML = '';
+    list.classList.remove('open');
+    return;
+  }
+
+  const hits = allPlayers
+    .filter(p =>
+      (!position || p.position === position) &&
+      p.name.toLowerCase().includes(q)
+    )
+    .slice(0, 8);
+
+  if (!hits.length) {
+    list.classList.remove('open');
+    return;
+  }
+
+  // build dropdown
+  list.innerHTML = hits.map((p, i) => `
+    <div class="autocomplete-item" data-index="${i}">
+      ${p.name} (${p.position})
+    </div>
+  `).join('');
+
+  list.classList.add('open');
+
+  //  FIXED CLICK HANDLER
+  list.querySelectorAll('.autocomplete-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const player = hits[item.dataset.index];
+
+      input.value = player.name;   // 👈 THIS is the key fix
+      input.classList.add('matched');
+      list.classList.remove('open');
+    });
+  });
+});
+
+  input.addEventListener('blur', ()=>setTimeout(()=>list.classList.remove('open'),150));
+  input.addEventListener('keydown', e=>{
+    if(e.key==='Escape') list.classList.remove('open');
+  });
+});
+
+// ── Collect form data ───────────────────────────────────
+function collectTeamNames(){
+  return [...document.querySelectorAll('.player-input-wrap input')]
+    .map(i=>i.value.trim()).filter(Boolean);
+}
+
+function collectChips(){
+  return [...document.querySelectorAll('.chip-toggle:checked')].map(c=>c.value);
+}
+
+// ── Helpers ─────────────────────────────────────────────
+const POS_CLASS = {
+  'Goalkeeper':'gk','Defender':'def','Midfielder':'mid','Forward':'fwd'
+};
+const POS_SHORT = {
+  'Goalkeeper':'GK','Defender':'DEF','Midfielder':'MID','Forward':'FWD'
+};
+
+function posPill(pos){
+  const cls = POS_CLASS[pos]||'';
+  return `<span class="pos-pill ${cls}">${POS_SHORT[pos]||pos}</span>`;
+}
+
+// ── Main analysis ────────────────────────────────────────
+let chartInstances = [];
+
+async function runAnalysis(){
+  const btn     = document.getElementById('analyzeBtn');
+  const spinner = document.getElementById('spinner');
+  const btnText = document.getElementById('btnText');
+
+  const names = collectTeamNames();
+  if(names.length < 10){
+    showBanner('error','Please enter at least 10 players to continue.');
+    return;
+  }
+
+  btn.disabled = true;
+  spinner.style.display = 'block';
+  btnText.textContent = 'Analysing…';
+
+  // destroy old charts
+  chartInstances.forEach(c=>c.destroy());
+  chartInstances=[];
+  document.getElementById('results').style.display='none';
+
+  const injuredShort = Array.from(document.querySelectorAll("#inj-short input"))
+    .map(i => i.value.trim())
+    .filter(v => v);
+
+  const injuredLong = Array.from(document.querySelectorAll("#inj-long input"))
+    .map(i => i.value.trim())
+    .filter(v => v);
+
+  const payload = {
+    current_gw:    parseInt(document.getElementById('current_gw').value),
+    free_transfers:parseInt(document.getElementById('free_transfers').value),
+    money_in_bank: parseFloat(document.getElementById('money_in_bank').value),
+    team_names:    names,
+    chips_used:    collectChips(),
+    injured_short: injuredShort,
+    injured_long:  injuredLong
+  };
+
+  try{
+    const res  = await fetch('/analyze',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    });
+    const data = await res.json();
+
+    btn.disabled=false;
+    spinner.style.display='none';
+    btnText.textContent='⚡ Analyse My Team';
+
+    if(data.error){
+      showBanner('error', data.error);
+      return;
+    }
+
+    renderResults(data);
+
+  }catch(err){
+    btn.disabled=false;
+    spinner.style.display='none';
+    btnText.textContent='⚡ Analyse My Team';
+    showBanner('error','Network error. Is the Flask server running?');
+  }
+}
+
+function showBanner(type, msg){
+  const icon={error:'⚠️',info:'ℹ️',warn:'💡'}[type]||'';
+  const el = document.getElementById('results');
+  el.style.display='block';
+  el.innerHTML=`<div class="banner ${type}">${icon} ${msg}</div>`;
+}
+
+// ── Chip urgency styles ──────────────────────────────────
+const CHIP_URGENCY = {
+  use_now:  { border:'rgba(0,230,118,.4)',  bg:'rgba(0,230,118,.08)',  badge:'USE NOW',   badgeBg:'rgba(0,230,118,.2)',  badgeColor:'#00e676' },
+  consider: { border:'rgba(0,180,216,.35)', bg:'rgba(0,180,216,.07)', badge:'CONSIDER',  badgeBg:'rgba(0,180,216,.18)', badgeColor:'#00b4d8' },
+  save:     { border:'rgba(107,127,163,.3)',bg:'rgba(107,127,163,.05)',badge:'SAVE IT',   badgeBg:'rgba(107,127,163,.15)',badgeColor:'#6b7fa3'},
+  used:     { border:'rgba(107,127,163,.2)',bg:'rgba(107,127,163,.04)',badge:'USED',      badgeBg:'rgba(107,127,163,.1)', badgeColor:'#6b7fa3'},
+};
+
+// ── Render results ───────────────────────────────────────
+function renderResults(d){
+  lastData = d;
+  const el = document.getElementById('results');
+  el.style.display='block';
+  el.className='results-enter';
+
+  let html='';
+
+  // ── Summary cards ──────────────────────────────────────
+  html+=`
+  <div class="section-title" style="margin-bottom:16px"><span class="dot"></span>Summary — GW${d.current_gw}</div>
+  <div class="summary-grid">
+    <div class="summary-card highlight">
+      <div class="label">Captain Pick</div>
+      <div class="value">${d.captain}</div>
+      <div class="sub">${d.captain_pts} projected pts</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Vice Captain</div>
+      <div class="value">${d.vice_captain}</div>
+      <div class="sub">${d.vc_pts} projected pts</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Team Value</div>
+      <div class="value">£${d.team_value}m</div>
+      <div class="sub">Total squad cost</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Total Budget</div>
+      <div class="value">£${d.budget}m</div>
+      <div class="sub">Value + money in bank</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Players Matched</div>
+      <div class="value">${d.matched}/15</div>
+      <div class="sub">Fuzzy name matching</div>
+    </div>
+  </div>`;
+
+  // ── Match log ──────────────────────────────────────────
+  if(d.match_log && d.match_log.length){
+    html+=`<div class="match-log">🔍 Name matching: ${d.match_log.join(' &nbsp;|&nbsp; ')}</div>`;
+  }
+
+  // ── Chip Strategy ──────────────────────────────────────
+  if(d.chip_advice && d.chip_advice.length){
+    html+=`
+    <div class="section-title" style="margin-bottom:16px"><span class="dot"></span>Chip Strategy — GW${d.current_gw}</div>
+    <div class="chip-advice-grid">`;
+    d.chip_advice.forEach(c=>{
+      const style = CHIP_URGENCY[c.urgency] || CHIP_URGENCY.save;
+      html+=`
+      <div class="chip-advice-card" style="border-color:${style.border};background:${style.bg}">
+        <div class="cac-top">
+          <span class="cac-icon">${c.icon}</span>
+          <span class="cac-name">${c.chip}</span>
+          <span class="cac-badge" style="background:${style.badgeBg};color:${style.badgeColor}">${style.badge}</span>
+        </div>
+        <p class="cac-reason">${c.reason}</p>
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+
+  // ── Team overview ──────────────────────────────────────
+  html+=`
+  <div class="section-title" style="margin-bottom:16px;margin-top:32px"><span class="dot"></span>Your Squad — GW${d.current_gw} Projections</div>
+  <div class="card" style="margin-bottom:32px;overflow-x:auto">
+    <table class="team-table">
+      <thead><tr>
+        <th>Player</th><th>Pos</th><th>Cost</th>
+        <th>GW Pts</th><th>Fixture</th>
+      </tr></thead><tbody>`;
+  d.team_overview.forEach(p=>{
+    html+=`<tr>
+      <td style="font-weight:500">${p.name}</td>
+      <td>${posPill(p.position)}</td>
+      <td class="pts-num">£${p.cost}m</td>
+      <td class="pts-num" style="color:var(--accent)">${p.gw_pts}</td>
+      <td class="fixture-text">${p.fixture}</td>
+    </tr>`;
+  });
+  html+=`</tbody></table></div>`;
+
+  // ── Transfer recommendations ───────────────────────────
+  html+=`<div class="section-title" style="margin-bottom:4px"><span class="dot"></span>Top Transfer Recommendations</div>
+  <p style="font-size:13px;color:var(--muted);margin-bottom:20px">Ranked by projected points gain over next 2–7 gameweeks. Each swap has its own comparison chart.</p>`;
+
+  // track charts to build after innerHTML set
+  const chartQueue = [];
+
+  if(!d.transfers || !d.transfers.length){
+    html+=`<div class="card no-transfers">
+      <div class="icon">✅</div>
+      <p style="color:var(--text);font-weight:500">No beneficial transfers found</p>
+      <p style="font-size:13px;margin-top:6px">Your team is already well-optimised for upcoming fixtures.</p>
+    </div>`;
+  } else {
+    d.transfers.forEach((t, ti)=>{
+      // number of swaps in this recommendation (1 or 2)
+      const nSwaps = Math.min(t.out.length, t.in.length);
+
+      // Build per-swap chart IDs
+      const swapChartIds = Array.from({length:nSwaps},(_,si)=>`chart-${ti}-${si}`);
+
+      html+=`
+      <div class="transfer-card">
+        <div class="transfer-header">
+          <span class="transfer-rank">#${ti+1} — ${nSwaps === 1 ? '1 Transfer' : nSwaps + ' Transfers'}</span>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <span class="gain-badge">+${t.gain} pts gain</span>
+            <span class="transfer-meta">New total: ${t.new_total} pts &nbsp;|&nbsp; Cost: £${t.new_cost}m</span>
+          </div>
+        </div>`;
+
+      // ── Each individual swap ───────────────────────────
+      for(let si=0; si<nSwaps; si++){
+        const outP = t.out[si], inP = t.in[si];
+        const chartId = swapChartIds[si];
+
+        html+=`
+        <div class="swap-block${nSwaps > 1 ? ' multi' : ''}">
+          ${nSwaps > 1 ? `<div class="swap-label">Swap ${si+1}</div>` : ''}
+
+          <div class="transfer-players">
+            <div class="player-card-small">
+              <div class="pcr-label out">⬆ Transfer Out</div>
+              <div class="pcr-name">${outP.name}</div>
+              <div class="pcr-row">
+                ${posPill(outP.position)}
+                <span class="cost-tag">£${outP.cost}m</span>
+                <span class="pcr-pts">7GW: ${outP.pred_7gw} pts</span>
+              </div>
+            </div>
+            <div class="arrow-col"><div class="arrow-icon">→</div></div>
+            <div class="player-card-small" style="border-color:rgba(0,230,118,.2);background:rgba(0,230,118,.04)">
+              <div class="pcr-label in">⬇ Transfer In</div>
+              <div class="pcr-name">${inP.name}</div>
+              <div class="pcr-row">
+                ${posPill(inP.position)}
+                <span class="cost-tag">£${inP.cost}m</span>
+                <span class="pcr-pts">7GW: ${inP.pred_7gw} pts</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Line chart for this swap -->
+          <div class="chart-section">
+            <p class="chart-label">Projected Points — Next 5 GWs</p>
+            <div class="chart-wrap"><canvas id="${chartId}"></canvas></div>
+            <div class="fixture-row">
+              <div class="fixture-col">
+                <span class="fix-player-label" style="color:rgba(255,77,109,.8)">${outP.name}</span>
+                ${outP.fixtures.map(f=>`<span class="fixture-chip">${f||'—'}</span>`).join('')}
+              </div>
+              <div class="fixture-col">
+                <span class="fix-player-label" style="color:rgba(0,230,118,.8)">${inP.name}</span>
+                ${inP.fixtures.map(f=>`<span class="fixture-chip">${f||'—'}</span>`).join('')}
+              </div>
+            </div>
+          </div>
+        </div>`;
+
+        chartQueue.push({ chartId, outP, inP, labels: d.gw_labels });
+      }
+
+      html+=`</div>`; // /transfer-card
+    });
+  }
+
+// wildcard free hit buttons
+html += `
+<div class="section-title"><span class="dot"></span>Use a Chip?</div>
+<div class="card" style="display:flex; gap:10px; flex-wrap:wrap">
+  <button class="chip-btn" onclick="showFreeHit()">Free Hit</button>
+  <button class="chip-btn" onclick="showWildcard()">Wildcard</button>
+</div>
+
+<div id="chip-output"></div>
+`;
+
+
+  // ─────────────────────────────────────────────
+// 🔥 BEST XI (CURRENT TEAM)
+// ─────────────────────────────────────────────
+html += `
+<div class="section-title"><span class="dot"></span>Best XI (${d.formation})</div>
+<div class="card">
+  <b>Captain:</b> ${d.captain_pick} <br>
+  <b>Vice:</b> ${d.vice_pick}<br><br>
+
+  ${d.best_xi.map(p => `
+    <div>${p.name} (${p.position}) — ${p.pts} pts</div>
+  `).join("")}
+
+  <br><b>Bench:</b><br>
+  ${d.bench.map(p => `
+    <div>${p.name} — ${p.pts} pts</div>
+  `).join("")}
+</div>`;
+
+  el.innerHTML = html;
+
+  // ── Build line charts after DOM ready ─────────────────
+  chartInstances.forEach(c=>c.destroy());
+  chartInstances=[];
+
+  chartQueue.forEach(({chartId, outP, inP, labels})=>{
+    const ctx = document.getElementById(chartId);
+    if(!ctx) return;
+
+    const ch = new Chart(ctx,{
+      type:'line',
+      data:{
+        labels,
+        datasets:[
+          {
+            label: outP.name + ' (Out)',
+            data: outP.gw_breakdown,
+            borderColor:'rgba(255,77,109,0.9)',
+            backgroundColor:'rgba(255,77,109,0.1)',
+            pointBackgroundColor:'rgba(255,77,109,0.9)',
+            pointRadius:5,
+            pointHoverRadius:7,
+            borderWidth:2.5,
+            tension:0.35,
+            fill:true,
+          },
+          {
+            label: inP.name + ' (In)',
+            data: inP.gw_breakdown,
+            borderColor:'rgba(0,230,118,0.9)',
+            backgroundColor:'rgba(0,230,118,0.08)',
+            pointBackgroundColor:'rgba(0,230,118,0.9)',
+            pointRadius:5,
+            pointHoverRadius:7,
+            borderWidth:2.5,
+            tension:0.35,
+            fill:true,
+          }
+        ]
+      },
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        interaction:{mode:'index',intersect:false},
+        plugins:{
+          legend:{
+            labels:{
+              color:'#8a9bbf',
+              font:{family:"'DM Sans',sans-serif",size:12},
+              usePointStyle:true,
+              pointStyleWidth:10,
+            }
+          },
+          tooltip:{
+            backgroundColor:'#0d1525',
+            borderColor:'#1e2e4a',
+            borderWidth:1,
+            titleColor:'#e2eaf5',
+            bodyColor:'#8a9bbf',
+            padding:12,
+            callbacks:{
+              label: ctx=>`  ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)} pts`,
+              afterLabel: ctx=>{
+                const fixes = ctx.datasetIndex===0 ? outP.fixtures : inP.fixtures;
+                const f = fixes[ctx.dataIndex];
+                return f && f!=='—' ? `  vs ${f}` : '';
+              }
+            }
+          }
+        },
+        scales:{
+          x:{
+            ticks:{color:'#6b7fa3',font:{family:"'DM Mono',monospace",size:11}},
+            grid:{color:'rgba(30,46,74,0.5)'},
+          },
+          y:{
+            ticks:{color:'#6b7fa3',font:{family:"'DM Mono',monospace",size:11}},
+            grid:{color:'rgba(30,46,74,0.5)'},
+            beginAtZero:true,
+          }
+        }
+      }
+    });
+    chartInstances.push(ch);
+  });
+
+  el.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+  function showFreeHit() {
+  const d = lastData;
+  if (!d || !d.free_hit_team) return;
+
+  let html = `
+  <div class="section-title"><span class="dot"></span>Free Hit Team (${d.free_hit_team.formation})</div>
+  <div class="card">
+    <b>Captain:</b> ${d.free_hit_team.captain}<br>
+    <b>Vice:</b> ${d.free_hit_team.vice}<br><br>
+
+    ${d.free_hit_team.xi.map(p => `
+      <div>${p.name} — ${p.pts} pts</div>
+    `).join("")}
+
+    <br><b>Bench:</b><br>
+    ${d.free_hit_team.bench.map(p => `
+      <div>${p.name}</div>
+    `).join("")}
+  </div>`;
+
+  document.getElementById("chip-output").innerHTML = html;
+}
+
+function showWildcard() {
+  const d = lastData;
+  if (!d || !d.wildcard_team) return;
+
+  let html = `
+  <div class="section-title"><span class="dot"></span>Wildcard Team (${d.wildcard_team.formation})</div>
+  <div class="card">
+    <b>Captain:</b> ${d.wildcard_team.captain}<br>
+    <b>Vice:</b> ${d.wildcard_team.vice}<br><br>
+
+    ${d.wildcard_team.xi.map(p => `
+      <div>${p.name} — ${p.pts} pts</div>
+    `).join("")}
+
+    <br><b>Bench:</b><br>
+    ${d.wildcard_team.bench.map(p => `
+      <div>${p.name}</div>
+    `).join("")}
+  </div>`;
+
+  document.getElementById("chip-output").innerHTML = html;
+}
+
+</script>
+</body>
+</html>
